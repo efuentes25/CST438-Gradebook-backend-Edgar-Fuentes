@@ -15,6 +15,9 @@ import com.cst438.domain.EnrollmentDTO;
 import com.cst438.domain.EnrollmentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.springframework.context.annotation.Bean;
+
+
 @Service
 @ConditionalOnProperty(prefix = "gradebook", name = "service", havingValue = "mq")
 public class GradebookServiceMQ implements GradebookService {
@@ -26,6 +29,14 @@ public class GradebookServiceMQ implements GradebookService {
 	EnrollmentRepository enrollmentRepository;
 	
 	Queue gradebookQueue = new Queue("gradebook-queue", true);
+	
+	@Bean
+
+	 Queue createQueue() {
+
+	 return new Queue("registration-queue");
+
+	 }
 
 	// send message to grade book service about new student enrollment in course
 	@Override
