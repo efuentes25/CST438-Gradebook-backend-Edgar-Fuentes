@@ -29,9 +29,11 @@ public class GradebookServiceREST implements GradebookService {
 	@Override
 	public void enrollStudent(String student_email, String student_name, int course_id) {
 		System.out.println("Start Message "+ student_email +" " + course_id); 
+		
+		EnrollmentDTO enrollmentDto = new EnrollmentDTO(0, student_email, student_name, course_id);
 	
 		// TODO use RestTemplate to send message to gradebook service
-		
+		restTemplate.postForObject( gradebook_url + "/Enrollment", enrollmentDto,  EnrollmentDTO.class);
 	}
 	
 	@Autowired
@@ -45,5 +47,18 @@ public class GradebookServiceREST implements GradebookService {
 		System.out.println("Grades received "+grades.length);
 		
 		//TODO update grades in enrollment records with grades received from gradebook service
+		for(FinalGradeDTO gradeDTO : grades) {
+			Enrollment enrollment = enrollmentRepository.findByEmailAndCourseId(gradeDTO.studentEmail(), gradeDTO.courseId());
+			
+			// checks if it's not null and updates the course grade
+			if(enrollment != null) {
+	            enrollment.setCourseGrade(gradeDTO.grade());
+	            enrollmentRepository.save(enrollment);
+			}
+			else {
+	            System.out.println("No enrollment found for student's grade");
+			}
+			
+		}
 	}
 }

@@ -15,6 +15,9 @@ import com.cst438.domain.EnrollmentDTO;
 import com.cst438.domain.EnrollmentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.springframework.context.annotation.Bean;
+
+
 @Service
 @ConditionalOnProperty(prefix = "gradebook", name = "service", havingValue = "mq")
 public class GradebookServiceMQ implements GradebookService {
@@ -26,6 +29,14 @@ public class GradebookServiceMQ implements GradebookService {
 	EnrollmentRepository enrollmentRepository;
 	
 	Queue gradebookQueue = new Queue("gradebook-queue", true);
+	
+	@Bean
+
+	 Queue createQueue() {
+
+	 return new Queue("registration-queue");
+
+	 }
 
 	// send message to grade book service about new student enrollment in course
 	@Override
@@ -33,6 +44,9 @@ public class GradebookServiceMQ implements GradebookService {
 		System.out.println("Start Message "+ student_email +" " + course_id); 
 		// create EnrollmentDTO, convert to JSON string and send to gradebookQueue
 		// TODO
+		EnrollmentDTO enrollmentDto = new EnrollmentDTO(0 , student_email, student_name, course_id);
+        String s = asJsonString(enrollmentDto);
+        rabbitTemplate.convertAndSend(gradebookQueue.getName(), s);
 	}
 	
 	@RabbitListener(queues = "registration-queue")
@@ -45,8 +59,25 @@ public class GradebookServiceMQ implements GradebookService {
 		 */
 		
 		// deserialize the string message to FinalGradeDTO[] 
-		
-		// TODO
+	    FinalGradeDTO[] grades = fromJsonString(message, FinalGradeDTO[].class);
+
+	    for (FinalGradeDTO gradeDTO : grades) {
+	    	String studentEmail = gradeDTO.studentEmail();
+	        int courseId = gradeDTO.courseId();
+	        String gradeDto = gradeDTO.grade();
+	        
+	        // Find the student's enrollment record
+	        Enrollment enrollment = enrollmentRepository.findByEmailAndCourseId(studentEmail, courseId);
+
+	        if (enrollment != null) {
+	            // Update the grade for the found enrollment record
+	            enrollment.setCourseGrade(gradeDto);
+	            enrollmentRepository.save(enrollment);
+	        }
+	        else {
+	        	System.out.println("No enrollment found for student's course");
+	        }
+	    }
 
 	}
 	
